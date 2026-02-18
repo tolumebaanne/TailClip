@@ -4,8 +4,8 @@
 *.dll
 *.so
 *.dylib
-hub
-agent
+/hub
+/agent
 
 # Test binaries
 *.test
