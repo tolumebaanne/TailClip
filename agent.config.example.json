@@ -1,0 +1,18 @@
+{
+    "_comments": {
+        "device_id": "Unique identifier for this device. Use a short, descriptive slug (e.g., macbook-air, work-desktop). Must be unique across all devices in your Tailnet. Can also be set via TAILCLIP_DEVICE_ID env var.",
+        "device_name": "Human-readable name shown in logs and notifications (e.g., MacBook Air, Work Desktop).",
+        "hub_url": "Full URL to the TailClip hub server. Use the hub's Tailscale IP address (100.x.x.x) for secure Tailnet-only communication. Find it with: tailscale ip -4 (on the hub machine). Can also be set via TAILCLIP_HUB_URL env var.",
+        "auth_token": "Shared secret for authenticating with the hub. MUST match the hub's auth_token. Can also be set via TAILCLIP_AGENT_AUTH_TOKEN env var.",
+        "enabled": "Set to false to temporarily disable clipboard sync without removing the config.",
+        "poll_interval_ms": "How often (in milliseconds) to check for local clipboard changes. Lower = faster sync but more CPU. Recommended: 500-2000ms.",
+        "notify_enabled": "Show desktop notifications when clipboard content is synced from another device. Set to false for silent operation."
+    },
+    "device_id": "macbook-air",
+    "device_name": "MacBook Air",
+    "hub_url": "http://100.64.0.1:8080",
+    "auth_token": "CHANGE_THIS_TOKEN",
+    "enabled": true,
+    "poll_interval_ms": 1000,
+    "notify_enabled": true
+}

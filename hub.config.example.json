@@ -1,0 +1,16 @@
+{
+    "_comments": {
+        "listen_ip": "IP address to bind the HTTP server. Use 0.0.0.0 for all interfaces, 127.0.0.1 for local-only, or your Tailscale IP (e.g., 100.64.x.x) for Tailnet-only access.",
+        "listen_port": "TCP port for the hub HTTP server. Default 8080. Change if another service uses this port.",
+        "auth_token": "Shared secret for authenticating agent requests. MUST match the auth_token in each agent's config. Use a long, random string (e.g., openssl rand -hex 32). Can also be set via TAILCLIP_HUB_AUTH_TOKEN env var.",
+        "sqlite_path": "File path for the SQLite database. Stores clipboard events and device registrations. Relative paths are relative to the working directory.",
+        "history_limit": "Maximum number of clipboard events to retain in the database. Prevents unbounded storage growth.",
+        "retention_days": "Number of days to keep clipboard history before automatic deletion. Balances privacy with history availability."
+    },
+    "listen_ip": "0.0.0.0",
+    "listen_port": 8080,
+    "auth_token": "CHANGE_THIS_TOKEN",
+    "sqlite_path": "tailclip.db",
+    "history_limit": 1000,
+    "retention_days": 30
+}
