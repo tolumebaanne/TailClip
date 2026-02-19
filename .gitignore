@@ -33,3 +33,11 @@ go.work
 *.db
 *.sqlite
 *.sqlite3
+
+# Runtime config files (contain secrets/local paths)
+hub-config.json
+agent-ubuntu-config.json
+
+# Compiled binaries in package dirs
+hub/hub
+agent/agent
