@@ -1,0 +1,9 @@
+{
+    "device_id": "macbook-air",
+    "device_name": "MacBook Air",
+    "hub_url": "http://100.68.33.103:8080",
+    "auth_token": "test-token-12345",
+    "enabled": true,
+    "poll_interval_ms": 1000,
+    "notify_enabled": true
+}
