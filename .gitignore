@@ -36,8 +36,17 @@ go.work
 
 # Runtime config files (contain secrets/local paths)
 hub-config.json
+agent-config.json
 agent-ubuntu-config.json
 
 # Compiled binaries in package dirs
 hub/hub
 agent/agent
+
+# Logs
+/logs/
+*.log
+
+# Database WAL/SHM files
+*.db-wal
+*.db-shm
