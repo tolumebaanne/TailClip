@@ -5,7 +5,9 @@
 *.so
 *.dylib
 /hub
+!/hub/
 /agent
+!/agent/
 
 # Test binaries
 *.test
