@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/tmair/tailclip/shared/auth"
 	"github.com/tmair/tailclip/shared/models"
 )
@@ -24,19 +25,21 @@ import (
 // can access them without global variables. Makes testing easier since you can
 // inject a test Storage instance.
 type Server struct {
-	storage   *Storage
-	authToken string
-	mux       *http.ServeMux
+	storage     *Storage
+	broadcaster *Broadcaster
+	authToken   string
+	mux         *http.ServeMux
 }
 
 // NewServer creates a Server wired to the given storage and auth token.
 // WHY accept dependencies: Follows dependency injection so callers (main, tests)
 // control which storage backend and credentials the server uses.
-func NewServer(storage *Storage, authToken string) *Server {
+func NewServer(storage *Storage, broadcaster *Broadcaster, authToken string) *Server {
 	s := &Server{
-		storage:   storage,
-		authToken: authToken,
-		mux:       http.NewServeMux(),
+		storage:     storage,
+		broadcaster: broadcaster,
+		authToken:   authToken,
+		mux:         http.NewServeMux(),
 	}
 	s.setupRoutes()
 	return s
@@ -50,6 +53,7 @@ func (s *Server) setupRoutes() {
 	s.mux.HandleFunc("/api/v1/history", s.handleHistory)
 	s.mux.HandleFunc("/api/v1/health", s.handleHealth)
 	s.mux.HandleFunc("/api/v1/device/register", s.handleRegister)
+	s.mux.HandleFunc("/api/v1/ws", s.handleWebSocket)
 }
 
 // ServeHTTP delegates to the internal mux so Server satisfies http.Handler.
@@ -80,6 +84,8 @@ func (s *Server) ListenAndServe(addr string) error {
 // WHY POST-only: Pushing a clipboard event is a write operation that
 // creates a new resource. GET would be semantically wrong and breaks caching.
 func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Push request received from %s", r.RemoteAddr)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -113,6 +119,14 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to store event", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("Event stored: id=%s source=%s type=%s", event.EventID, event.SourceDeviceID, event.ContentType)
+
+	// Broadcast to all connected WebSocket clients AFTER successful storage.
+	// WHY after storage: If storage fails, we don't want to broadcast an event
+	// that isn't persisted - agents would receive it but it wouldn't appear in
+	// history, causing inconsistency.
+	s.broadcaster.Broadcast(&event, event.SourceDeviceID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -199,4 +213,77 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		"status":  "registered",
 		"message": fmt.Sprintf("device %s registered", device.DeviceID),
 	})
+}
+
+// --- WebSocket ---------------------------------------------------------------
+
+// upgrader configures the WebSocket upgrade handshake.
+// WHY CheckOrigin returns true: TailClip runs on a private Tailscale network,
+// not the public internet. Strict origin checking would block legitimate agent
+// connections since they don't come from a browser with an Origin header.
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+// handleWebSocket upgrades an HTTP connection to WebSocket for real-time
+// clipboard event delivery.
+//
+// WHY this endpoint exists: Agents connect here to receive instant push
+// notifications of clipboard events from other devices, instead of polling
+// the /api/v1/history endpoint repeatedly.
+//
+// WHY authenticate via query parameter: WebSocket upgrade requests are standard
+// HTTP GETs where custom headers aren't reliably supported across all client
+// libraries. The ?token= approach is the widely accepted workaround
+// (see shared/auth/token.go for details).
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Authenticate using query parameter.
+	// WHY query param here: WebSocket clients can't set custom headers during
+	// the upgrade handshake, so we fall back to ?token= for auth.
+	if !auth.Authenticate(r, s.authToken) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract device ID from query parameter.
+	// WHY required: The broadcaster needs the device ID to register the
+	// connection and skip the source device during broadcast.
+	deviceID := r.URL.Query().Get("device_id")
+	if deviceID == "" {
+		http.Error(w, "device_id query parameter required", http.StatusBadRequest)
+		return
+	}
+
+	// Upgrade HTTP connection to WebSocket.
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("ERROR: WebSocket upgrade failed for device %s: %v", deviceID, err)
+		return
+	}
+
+	// Register the WebSocket connection with the broadcaster.
+	s.broadcaster.AddClient(deviceID, conn)
+	log.Printf("WebSocket connected: device=%s", deviceID)
+
+	// Read loop - keeps the connection alive and detects disconnection.
+	// WHY a read loop: WebSocket connections require active reading to detect
+	// when the remote end disconnects. Without this, the broadcaster would
+	// keep trying to write to a dead connection. We don't expect meaningful
+	// messages from agents (they push via HTTP), so we just discard reads.
+	defer func() {
+		s.broadcaster.RemoveClient(deviceID)
+		log.Printf("WebSocket disconnected: device=%s", deviceID)
+	}()
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			// WHY break on error: Any read error (clean close, network drop,
+			// etc.) means the connection is done. The deferred RemoveClient
+			// will clean up.
+			break
+		}
+	}
 }

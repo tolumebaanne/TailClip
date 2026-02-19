@@ -69,8 +69,7 @@ func main() {
 	// WHY pass both storage and auth token: Dependency injection keeps the
 	// server testable. In tests you can supply a mock storage and a known
 	// token without touching config files or environment variables.
-	server := NewServer(storage, cfg.AuthToken)
-	_ = broadcaster // TODO: wire broadcaster into server when WebSocket endpoint is added
+	server := NewServer(storage, broadcaster, cfg.AuthToken)
 
 	addr := fmt.Sprintf("%s:%d", cfg.ListenIP, cfg.ListenPort)
 	log.Printf("Starting TailClip hub on %s", addr)
