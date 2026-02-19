@@ -1,0 +1,8 @@
+{
+    "listen_ip": "100.68.33.103",
+    "listen_port": 8080,
+    "auth_token": "test-token-12345",
+    "sqlite_path": "/home/your-ubuntu-username/tailclip.db",
+    "history_limit": 20,
+    "retention_days": 30
+}

@@ -257,10 +257,13 @@ func (s *Syncer) ReceiveFromHub(conn *websocket.Conn, notifyEnabled bool) {
 			continue
 		}
 
+		log.Printf("WebSocket received event: id=%s source=%s", event.EventID, event.SourceDeviceID)
+
 		// Skip events from ourselves - WHY: Even though the hub skips the
 		// source device in Broadcast, belt-and-suspenders defense prevents
 		// loops if the hub logic ever changes or has a bug.
 		if event.SourceDeviceID == s.deviceID {
+			log.Printf("Skipping own event %s", event.EventID)
 			continue
 		}
 
