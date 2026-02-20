@@ -117,6 +117,9 @@ hdiutil create -volname "$VOLUME_NAME" \
     -format UDZO \
     "$DIST_DIR/$DMG_NAME.dmg"
 
+mkdir -p "$PROJECT_ROOT/distribution"
+cp "$DIST_DIR/$DMG_NAME.dmg" "$PROJECT_ROOT/distribution/"
+
 echo ""
 echo "=== Build Complete ==="
 echo ""

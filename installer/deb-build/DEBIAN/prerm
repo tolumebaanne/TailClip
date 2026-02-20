@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+echo ""
+echo "======================================"
+echo "    Uninstalling TailClip...          "
+echo "======================================"
+
+# 1. Stop and disable services
+if systemctl is-active --quiet tailclip-hub.service 2>/dev/null; then
+    echo "  - Stopping tailclip-hub service"
+    systemctl stop tailclip-hub.service || true
+fi
+if systemctl is-enabled --quiet tailclip-hub.service 2>/dev/null; then
+    systemctl disable tailclip-hub.service || true
+fi
+
+if systemctl is-active --quiet tailclip-agent.service 2>/dev/null; then
+    echo "  - Stopping tailclip-agent service"
+    systemctl stop tailclip-agent.service || true
+fi
+if systemctl is-enabled --quiet tailclip-agent.service 2>/dev/null; then
+    systemctl disable tailclip-agent.service || true
+fi
+
+# 2. Remove systemd files
+echo "  - Removing systemd unit files"
+rm -f /etc/systemd/system/tailclip-*.service
+systemctl daemon-reload
+
+# 3. Remove binaries
+echo "  - Removing binaries"
+rm -f /usr/local/bin/tailclip-hub
+rm -f /usr/local/bin/tailclip-agent
+
+# 4. Remove all user configs and logs
+echo "  - Scrubbing config files and logs"
+for dir in /home/* /root; do
+    if [ -d "$dir/.config/tailclip" ]; then
+        rm -rf "$dir/.config/tailclip"
+        echo "    Removed $dir/.config/tailclip"
+    fi
+done
+
+echo ""
+echo "TailClip has been completely removed."
+echo ""
+exit 0

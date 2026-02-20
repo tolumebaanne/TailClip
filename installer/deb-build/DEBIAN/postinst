@@ -1,0 +1,213 @@
+#!/bin/bash
+set -e
+
+# Reattach to terminal for interactive prompts
+exec < /dev/tty > /dev/tty 2>&1 || true
+
+# Helper for displaying errors
+fail() {
+    echo -e "\nError: $1\n"
+    exit 1
+}
+
+# IP validation
+is_valid_ip() {
+    local ip="$1"
+    if [ -z "$ip" ]; then return 1; fi
+    if echo "$ip" | grep -qi 'x'; then return 1; fi
+    if ! echo "$ip" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then return 1; fi
+    return 0
+}
+
+echo ""
+echo "======================================"
+echo "    TailClip Ubuntu Installation      "
+echo "======================================"
+echo ""
+
+# Determine the actual user (since postinst runs as root)
+REAL_USER=${SUDO_USER:-root}
+if [ "$REAL_USER" = "root" ]; then
+    USER_HOME="/root"
+else
+    USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+fi
+CONFIG_DIR="$USER_HOME/.config/tailclip"
+BIN_DIR="/usr/local/bin"
+
+if [ ! -d "$USER_HOME" ]; then
+    fail "Could not determine user home directory."
+fi
+
+# 1. Component Selection
+while true; do
+    echo "What would you like to install?"
+    echo "  1) Agent Only (recommended for most devices)"
+    echo "  2) Hub Only (central server)"
+    echo "  3) Both Hub and Agent"
+    read -p "Select an option [1/2/3]: " opt
+    case "$opt" in
+        1) INSTALL_AGENT=true; INSTALL_HUB=false; break ;;
+        2) INSTALL_AGENT=false; INSTALL_HUB=true; break ;;
+        3) INSTALL_AGENT=true; INSTALL_HUB=true; break ;;
+        *) echo -e "\nInvalid option. Please enter 1, 2, or 3.\n" ;;
+    esac
+done
+
+echo ""
+
+# 2. Collect Configuration
+while true; do
+    read -p "Enter your shared auth token: " AUTH_TOKEN
+    if [ -n "$AUTH_TOKEN" ]; then break; fi
+    echo -e "Validation Error: Auth token cannot be empty.\n"
+done
+
+echo ""
+
+if [ "$INSTALL_HUB" = true ]; then
+    while true; do
+        read -p "Hub Listen IP [0.0.0.0]: " HUB_LISTEN_IP
+        HUB_LISTEN_IP=${HUB_LISTEN_IP:-0.0.0.0}
+        if is_valid_ip "$HUB_LISTEN_IP"; then break; fi
+        echo -e "Validation Error: Invalid IP address.\n"
+    done
+    
+    read -p "Hub Listen Port [8080]: " HUB_LISTEN_PORT
+    HUB_LISTEN_PORT=${HUB_LISTEN_PORT:-8080}
+    echo ""
+fi
+
+if [ "$INSTALL_AGENT" = true ]; then
+    DEFAULT_NAME=$(hostname)
+    read -p "Agent Device Name [$DEFAULT_NAME]: " DEVICE_NAME
+    DEVICE_NAME=${DEVICE_NAME:-$DEFAULT_NAME}
+    
+    DEVICE_ID=$(echo "$DEVICE_NAME" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | sed 's/ /-/g')
+    
+    if [ "$INSTALL_HUB" = true ]; then
+        HUB_URL="http://127.0.0.1:${HUB_LISTEN_PORT}"
+        echo "Agent will auto-connect to local hub at: $HUB_URL"
+    else
+        while true; do
+            read -p "Hub URL (e.g., http://100.x.x.x:8080): " HUB_URL
+            if [ -z "$HUB_URL" ]; then 
+                echo -e "Validation Error: Hub URL cannot be empty.\n"
+                continue
+            fi
+            URL_IP=$(echo "$HUB_URL" | sed -E 's|https?://||' | sed 's|:[0-9]*$||')
+            if is_valid_ip "$URL_IP"; then break; fi
+            echo -e "Validation Error: Invalid IP address in URL.\n"
+        done
+    fi
+    echo ""
+fi
+
+echo "Installing TailClip..."
+
+# 3. Copy Binaries
+echo "  - Copying binaries to $BIN_DIR"
+if [ "$INSTALL_HUB" = true ]; then
+    cp /usr/share/tailclip/tailclip-hub "$BIN_DIR/"
+    chmod +x "$BIN_DIR/tailclip-hub"
+fi
+if [ "$INSTALL_AGENT" = true ]; then
+    cp /usr/share/tailclip/tailclip-agent "$BIN_DIR/"
+    chmod +x "$BIN_DIR/tailclip-agent"
+fi
+
+# 4. Create configs
+echo "  - Creating configuration files in $CONFIG_DIR"
+mkdir -p "$CONFIG_DIR"
+
+if [ "$INSTALL_HUB" = true ]; then
+    cat > "$CONFIG_DIR/hub-config.json" << HUBEOF
+{
+    "listen_ip": "$HUB_LISTEN_IP",
+    "listen_port": $HUB_LISTEN_PORT,
+    "auth_token": "$AUTH_TOKEN",
+    "sqlite_path": "$CONFIG_DIR/tailclip.db",
+    "history_limit": 1000,
+    "retention_days": 30
+}
+HUBEOF
+fi
+
+if [ "$INSTALL_AGENT" = true ]; then
+    cat > "$CONFIG_DIR/agent-config.json" << AGENTEOF
+{
+    "device_id": "$DEVICE_ID",
+    "device_name": "$DEVICE_NAME",
+    "hub_url": "$HUB_URL",
+    "auth_token": "$AUTH_TOKEN",
+    "enabled": true,
+    "poll_interval_ms": 1000,
+    "notify_enabled": true
+}
+AGENTEOF
+fi
+
+# Set ownership to real user
+chown -R "$REAL_USER":"$REAL_USER" "$CONFIG_DIR"
+
+# 5. Setup Systemd services
+echo "  - Setting up systemd services"
+
+if [ "$INSTALL_HUB" = true ]; then
+    cat > /etc/systemd/system/tailclip-hub.service << SYSTEMDEOF
+[Unit]
+Description=TailClip Hub
+After=network.target tailscaled.service
+
+[Service]
+ExecStart=$BIN_DIR/tailclip-hub "$CONFIG_DIR/hub-config.json"
+WorkingDirectory=$CONFIG_DIR
+User=$REAL_USER
+Restart=always
+RestartSec=5
+StandardOutput=append:$CONFIG_DIR/hub-stdout.log
+StandardError=append:$CONFIG_DIR/hub-stderr.log
+
+[Install]
+WantedBy=multi-user.target
+SYSTEMDEOF
+    
+    systemctl enable tailclip-hub.service
+    systemctl start tailclip-hub.service
+fi
+
+if [ "$INSTALL_AGENT" = true ]; then
+    cat > /etc/systemd/system/tailclip-agent.service << SYSTEMDEOF
+[Unit]
+Description=TailClip Agent
+After=network.target tailscaled.service
+
+[Service]
+ExecStart=$BIN_DIR/tailclip-agent "$CONFIG_DIR/agent-config.json"
+WorkingDirectory=$CONFIG_DIR
+User=$REAL_USER
+Restart=always
+RestartSec=5
+StandardOutput=append:$CONFIG_DIR/agent-stdout.log
+StandardError=append:$CONFIG_DIR/agent-stderr.log
+
+[Install]
+WantedBy=multi-user.target
+SYSTEMDEOF
+    
+    systemctl enable tailclip-agent.service
+    systemctl start tailclip-agent.service
+fi
+
+systemctl daemon-reload
+
+echo ""
+echo "======================================"
+echo "    TailClip Installed Successfully   "
+echo "======================================"
+echo "Binaries: $BIN_DIR/tailclip-*"
+echo "Configs:  $CONFIG_DIR/"
+echo "Uninstaller built-in: sudo dpkg -r tailclip"
+echo ""
+
+exit 0
