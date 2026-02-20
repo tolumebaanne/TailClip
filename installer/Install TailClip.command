@@ -77,9 +77,13 @@ is_valid_ip() {
 echo "=== TailClip macOS Installer ==="
 echo ""
 
-# Check binaries exist in the DMG/installer directory
-if [ ! -f "$SCRIPT_DIR/$HUB_BINARY" ] && [ ! -f "$SCRIPT_DIR/$AGENT_BINARY" ]; then
-    fail "Error: No TailClip binaries found in $SCRIPT_DIR.\n\nPlease run the installer from the mounted DMG."
+# Check binaries exist in the .resources directory
+RESOURCES_DIR="$SCRIPT_DIR/.resources"
+if [ ! -d "$RESOURCES_DIR" ]; then
+    fail "Error: Resources not found.\n\nPlease run the installer from the mounted TailClip DMG."
+fi
+if [ ! -f "$RESOURCES_DIR/$HUB_BINARY" ] && [ ! -f "$RESOURCES_DIR/$AGENT_BINARY" ]; then
+    fail "Error: No TailClip binaries found.\n\nPlease run the installer from the mounted TailClip DMG."
 fi
 
 # --- Step 1: Welcome ---------------------------------------------------------
@@ -177,12 +181,12 @@ echo "[1/4] Installing binaries..."
 osascript -e 'do shell script "mkdir -p /usr/local/bin" with administrator privileges' 2>/dev/null
 
 if [ "$INSTALL_HUB" = true ]; then
-    osascript -e "do shell script \"cp '$SCRIPT_DIR/$HUB_BINARY' '$BIN_DIR/$HUB_BINARY' && chmod +x '$BIN_DIR/$HUB_BINARY'\" with administrator privileges" 2>/dev/null
+    osascript -e "do shell script \"cp '$RESOURCES_DIR/$HUB_BINARY' '$BIN_DIR/$HUB_BINARY' && chmod +x '$BIN_DIR/$HUB_BINARY'\" with administrator privileges" 2>/dev/null
     echo "  Installed $BIN_DIR/$HUB_BINARY"
 fi
 
 if [ "$INSTALL_AGENT" = true ]; then
-    osascript -e "do shell script \"cp '$SCRIPT_DIR/$AGENT_BINARY' '$BIN_DIR/$AGENT_BINARY' && chmod +x '$BIN_DIR/$AGENT_BINARY'\" with administrator privileges" 2>/dev/null
+    osascript -e "do shell script \"cp '$RESOURCES_DIR/$AGENT_BINARY' '$BIN_DIR/$AGENT_BINARY' && chmod +x '$BIN_DIR/$AGENT_BINARY'\" with administrator privileges" 2>/dev/null
     echo "  Installed $BIN_DIR/$AGENT_BINARY"
 fi
 
@@ -318,7 +322,15 @@ fi
 
 # --- Step 8: Done! ------------------------------------------------------------
 
-echo "[4/4] Installation complete!"
+echo "[4/4] Installing uninstaller..."
+if [ -f "$RESOURCES_DIR/Uninstall TailClip.command" ]; then
+    cp "$RESOURCES_DIR/Uninstall TailClip.command" "$CONFIG_DIR/"
+    chmod +x "$CONFIG_DIR/Uninstall TailClip.command"
+    echo "  Installed to $CONFIG_DIR/Uninstall TailClip.command"
+fi
+
+echo ""
+echo "Installation complete!"
 echo ""
 
 DONE_MSG="TailClip has been installed successfully!\n\n"
@@ -328,7 +340,7 @@ fi
 if [ "$INSTALL_AGENT" = true ]; then
     DONE_MSG="${DONE_MSG}Agent ($DEVICE_NAME) is syncing to $HUB_URL\n"
 fi
-DONE_MSG="${DONE_MSG}\nConfig files: $CONFIG_DIR/\nLogs: $CONFIG_DIR/*.log\n\nBoth services will start automatically on login."
+DONE_MSG="${DONE_MSG}\nConfig: $CONFIG_DIR/\nLogs: $CONFIG_DIR/*.log\n\nTo uninstall later:\n  Open $CONFIG_DIR/Uninstall TailClip.command"
 
 success "$DONE_MSG"
 echo "=== Installation Complete ==="
