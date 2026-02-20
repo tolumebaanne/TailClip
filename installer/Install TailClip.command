@@ -161,14 +161,14 @@ if [ "$INSTALL_AGENT" = true ]; then
         dialog "Agent will connect to the local hub at:\n$HUB_URL" "OK"
     else
         while true; do
-            HUB_URL=$(input_dialog "Agent: Enter the hub URL.\n\nFormat: http://<tailscale-ip>:<port>\n\nExample: http://100.68.33.103:8080\n\n(Find the hub's Tailscale IP with: tailscale ip -4 on the hub machine)" "")
+            HUB_URL=$(input_dialog "Agent: Enter the hub URL.\n\nFormat: http://<tailscale-ip>:<port>\n\nExample: http://100.100.100.100:8080\n\n(Find the hub's Tailscale IP with: tailscale ip -4 on the hub machine)" "")
             if [ -z "$HUB_URL" ]; then
                 fail "Hub URL is required. Installation cancelled."
             fi
             # Extract IP from URL and validate
             URL_IP=$(echo "$HUB_URL" | sed -E 's|https?://||' | sed 's|:[0-9]*$||')
             if is_valid_ip "$URL_IP"; then break; fi
-            warn_dialog "Invalid hub URL: $HUB_URL\n\nThe IP address '$URL_IP' is not valid.\n\nPlease enter a real IP address like:\nhttp://100.68.33.103:8080\n\nDo not use placeholders like 100.x.x.x"
+            warn_dialog "Invalid hub URL: $HUB_URL\n\nThe IP address '$URL_IP' is not valid.\n\nPlease enter a real IP address like:\nhttp://100.100.100.100:8080\n\nDo not use placeholders like 100.x.x.x"
         done
     fi
 fi

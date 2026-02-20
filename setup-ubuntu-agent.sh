@@ -30,7 +30,7 @@ cat > agent-ubuntu-config.json << 'EOF'
 {
   "device_id": "ubuntu-desktop",
   "device_name": "Ubuntu Desktop",
-  "hub_url": "http://100.68.33.103:8080",
+  "hub_url": "http://100.100.100.100:8080",
   "auth_token": "test-token-12345",
   "enabled": true,
   "poll_interval_ms": 1000,
