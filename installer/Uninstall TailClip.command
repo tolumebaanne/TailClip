@@ -7,6 +7,9 @@
 
 set -e
 
+# Redirect all output to log file to avoid terminal clutter
+exec > /tmp/tailclip_uninstall.log 2>&1
+
 # --- Constants ----------------------------------------------------------------
 CONFIG_DIR="$HOME/.config/tailclip"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
@@ -27,6 +30,10 @@ success() {
     osascript -e "display dialog \"$1\" with title \"TailClip Uninstaller\" buttons {\"Done\"} default button \"Done\" with icon note" 2>/dev/null
 }
 
+notify() {
+    osascript -e "display notification \"$1\" with title \"TailClip Uninstaller\"" 2>/dev/null
+}
+
 # --- Confirm ------------------------------------------------------------------
 
 echo "=== TailClip macOS Uninstaller ==="
@@ -36,6 +43,7 @@ dialog_yesno "This will uninstall TailClip from your Mac.\n\nThe following will 
 
 # --- Step 1: Stop and Remove LaunchAgents ------------------------------------
 
+notify "[1/4] Stopping services..."
 echo "[1/4] Stopping services..."
 
 if [ -f "$LAUNCH_AGENTS_DIR/${HUB_PLIST}.plist" ]; then
@@ -59,6 +67,7 @@ fi
 
 # --- Step 2: Remove Binaries ------------------------------------------------
 
+notify "[2/4] Removing binaries..."
 echo "[2/4] Removing binaries..."
 
 REMOVE_CMD=""
@@ -81,6 +90,7 @@ fi
 
 # --- Step 3: Config Files (Optional) -----------------------------------------
 
+notify "[3/4] Config files..."
 echo "[3/4] Config files..."
 
 if [ -d "$CONFIG_DIR" ]; then
@@ -96,6 +106,7 @@ fi
 
 # --- Step 4: Done -------------------------------------------------------------
 
+notify "[4/4] Uninstallation complete!"
 echo "[4/4] Uninstallation complete!"
 echo ""
 

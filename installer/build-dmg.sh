@@ -39,14 +39,50 @@ echo "  Built tailclip-hub (darwin/arm64)"
 GOOS=darwin GOARCH=arm64 go build -o "$RESOURCES_DIR/tailclip-agent" ./agent/
 echo "  Built tailclip-agent (darwin/arm64)"
 
-# --- Step 3: Copy installer and uninstaller into resources ---
-echo "[3/5] Staging installer files..."
-cp "$INSTALLER_DIR/Install TailClip.command" "$STAGING_DIR/"
-cp "$INSTALLER_DIR/Uninstall TailClip.command" "$RESOURCES_DIR/"
-chmod +x "$STAGING_DIR/Install TailClip.command"
-chmod +x "$RESOURCES_DIR/Uninstall TailClip.command"
-echo "  Staged Install TailClip.command (visible)"
-echo "  Staged Uninstall TailClip.command (in .resources)"
+# --- Step 3: Create Installer and Uninstaller App Bundles ---
+echo "[3/5] Creating App Bundles..."
+
+create_app_bundle() {
+    local script_path="$1"
+    local dest_dir="$2"
+    local app_name="$3"
+    local bundle_id="com.tailclip.${app_name// /-}"
+
+    local app_dir="$dest_dir/$app_name.app"
+    mkdir -p "$app_dir/Contents/MacOS"
+
+    # Copy script and make executable
+    cp "$script_path" "$app_dir/Contents/MacOS/$app_name"
+    chmod +x "$app_dir/Contents/MacOS/$app_name"
+
+    # Create Info.plist for background execution
+    cat > "$app_dir/Contents/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>$app_name</string>
+    <key>CFBundleIdentifier</key>
+    <string>$bundle_id</string>
+    <key>CFBundleName</key>
+    <string>$app_name</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>LSUIElement</key>
+    <true/>
+</dict>
+</plist>
+EOF
+}
+
+create_app_bundle "$INSTALLER_DIR/Install TailClip.command" "$STAGING_DIR" "Install TailClip"
+create_app_bundle "$INSTALLER_DIR/Uninstall TailClip.command" "$RESOURCES_DIR" "Uninstall TailClip"
+
+echo "  Created Install TailClip.app (visible)"
+echo "  Created Uninstall TailClip.app (in .resources)"
 
 # --- Step 4: Set Finder metadata ---
 echo "[4/5] Configuring DMG appearance..."
@@ -58,11 +94,11 @@ TailClip — Clipboard Sync over Tailscale
 
 Double-click "Install TailClip" to start the interactive installer.
 
-To uninstall later, run:
-  ~/.config/tailclip/Uninstall TailClip.command
+To uninstall later:
+  Open ~/.config/tailclip/Uninstall TailClip.app
 
 Or from Terminal:
-  bash "$HOME/.config/tailclip/Uninstall TailClip.command"
+  open "$HOME/.config/tailclip/Uninstall TailClip.app"
 
 Requirements:
   - macOS (Apple Silicon)
@@ -86,9 +122,9 @@ echo "=== Build Complete ==="
 echo ""
 echo "DMG created: $DIST_DIR/$DMG_NAME.dmg"
 echo ""
-echo "User sees:  Install TailClip  (one file, double-click to start)"
+echo "User sees:  Install TailClip.app  (one file, double-click to start)"
 echo "Hidden:     .resources/tailclip-hub, .resources/tailclip-agent"
-echo "            .resources/Uninstall TailClip.command"
+echo "            .resources/Uninstall TailClip.app"
 
 DMG_SIZE=$(du -h "$DIST_DIR/$DMG_NAME.dmg" | cut -f1)
 echo ""

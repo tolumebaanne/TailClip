@@ -8,6 +8,9 @@
 
 set -e
 
+# Redirect all output to log file to avoid terminal clutter
+exec > /tmp/tailclip_install.log 2>&1
+
 # --- Constants ----------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_DIR="$HOME/.config/tailclip"
@@ -60,6 +63,10 @@ warn_dialog() {
     osascript -e "display dialog \"$1\" with title \"TailClip Installer\" buttons {\"OK\"} default button \"OK\" with icon caution" 2>/dev/null
 }
 
+notify() {
+    osascript -e "display notification \"$1\" with title \"TailClip Installer\"" 2>/dev/null
+}
+
 # Validates an IP address: must be 4 octets of digits (0-255), no placeholders.
 is_valid_ip() {
     local ip="$1"
@@ -78,7 +85,14 @@ echo "=== TailClip macOS Installer ==="
 echo ""
 
 # Check binaries exist in the .resources directory
-RESOURCES_DIR="$SCRIPT_DIR/.resources"
+if [[ "$SCRIPT_DIR" == *"/Contents/MacOS" ]]; then
+    # Running inside .app bundle from DMG
+    RESOURCES_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)/.resources"
+else
+    # Direct execution
+    RESOURCES_DIR="$SCRIPT_DIR/.resources"
+fi
+
 if [ ! -d "$RESOURCES_DIR" ]; then
     fail "Error: Resources not found.\n\nPlease run the installer from the mounted TailClip DMG."
 fi
@@ -175,6 +189,7 @@ dialog_yesno "$SUMMARY" "Install" || exit 0
 # --- Step 5: Install Binaries ------------------------------------------------
 
 echo ""
+notify "[1/4] Installing binaries..."
 echo "[1/4] Installing binaries..."
 
 # Request sudo once
@@ -192,6 +207,7 @@ fi
 
 # --- Step 6: Generate Config Files -------------------------------------------
 
+notify "[2/4] Creating config files..."
 echo "[2/4] Creating config files..."
 mkdir -p "$CONFIG_DIR"
 
@@ -226,6 +242,7 @@ fi
 
 # --- Step 7: Create LaunchAgents ---------------------------------------------
 
+notify "[3/4] Setting up auto-start..."
 echo "[3/4] Setting up auto-start..."
 mkdir -p "$LAUNCH_AGENTS_DIR"
 
@@ -322,8 +339,12 @@ fi
 
 # --- Step 8: Done! ------------------------------------------------------------
 
+notify "[4/4] Installing uninstaller..."
 echo "[4/4] Installing uninstaller..."
-if [ -f "$RESOURCES_DIR/Uninstall TailClip.command" ]; then
+if [ -d "$RESOURCES_DIR/Uninstall TailClip.app" ]; then
+    cp -R "$RESOURCES_DIR/Uninstall TailClip.app" "$CONFIG_DIR/"
+    echo "  Installed to $CONFIG_DIR/Uninstall TailClip.app"
+elif [ -f "$RESOURCES_DIR/Uninstall TailClip.command" ]; then
     cp "$RESOURCES_DIR/Uninstall TailClip.command" "$CONFIG_DIR/"
     chmod +x "$CONFIG_DIR/Uninstall TailClip.command"
     echo "  Installed to $CONFIG_DIR/Uninstall TailClip.command"
@@ -340,7 +361,7 @@ fi
 if [ "$INSTALL_AGENT" = true ]; then
     DONE_MSG="${DONE_MSG}Agent ($DEVICE_NAME) is syncing to $HUB_URL\n"
 fi
-DONE_MSG="${DONE_MSG}\nConfig: $CONFIG_DIR/\nLogs: $CONFIG_DIR/*.log\n\nTo uninstall later:\n  Open $CONFIG_DIR/Uninstall TailClip.command"
+DONE_MSG="${DONE_MSG}\nConfig: $CONFIG_DIR/\nLogs: $CONFIG_DIR/*.log\n\nTo uninstall later:\n  Open $CONFIG_DIR/Uninstall TailClip.app"
 
 success "$DONE_MSG"
 echo "=== Installation Complete ==="
