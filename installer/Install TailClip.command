@@ -56,6 +56,22 @@ success() {
     osascript -e "display dialog \"$1\" with title \"TailClip Installer\" buttons {\"Done\"} default button \"Done\" with icon note" 2>/dev/null
 }
 
+warn_dialog() {
+    osascript -e "display dialog \"$1\" with title \"TailClip Installer\" buttons {\"OK\"} default button \"OK\" with icon caution" 2>/dev/null
+}
+
+# Validates an IP address: must be 4 octets of digits (0-255), no placeholders.
+is_valid_ip() {
+    local ip="$1"
+    # Reject empty
+    if [ -z "$ip" ]; then return 1; fi
+    # Reject placeholders containing x
+    if echo "$ip" | grep -qi 'x'; then return 1; fi
+    # Reject anything that isn't digits and dots
+    if ! echo "$ip" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then return 1; fi
+    return 0
+}
+
 # --- Preflight ----------------------------------------------------------------
 
 echo "=== TailClip macOS Installer ==="
@@ -102,8 +118,12 @@ fi
 
 # Hub configuration
 if [ "$INSTALL_HUB" = true ]; then
-    HUB_LISTEN_IP=$(input_dialog "Hub: Enter the IP address to listen on.\n\n• 0.0.0.0 = all interfaces\n• 127.0.0.1 = localhost only\n• Your Tailscale IP = Tailnet only\n\n(Find your Tailscale IP with: tailscale ip -4)" "0.0.0.0")
-    if [ -z "$HUB_LISTEN_IP" ]; then HUB_LISTEN_IP="0.0.0.0"; fi
+    while true; do
+        HUB_LISTEN_IP=$(input_dialog "Hub: Enter the IP address to listen on.\n\n• 0.0.0.0 = all interfaces\n• 127.0.0.1 = localhost only\n• Your Tailscale IP = Tailnet only\n\n(Find your Tailscale IP with: tailscale ip -4)" "0.0.0.0")
+        if [ -z "$HUB_LISTEN_IP" ]; then HUB_LISTEN_IP="0.0.0.0"; break; fi
+        if is_valid_ip "$HUB_LISTEN_IP"; then break; fi
+        warn_dialog "Invalid IP address: $HUB_LISTEN_IP\n\nPlease enter a valid IP like 0.0.0.0, 127.0.0.1, or your Tailscale IP (e.g., 100.64.0.1).\n\nDo not use placeholders like 100.x.x.x"
+    done
 
     HUB_LISTEN_PORT=$(input_dialog "Hub: Enter the port number to listen on." "8080")
     if [ -z "$HUB_LISTEN_PORT" ]; then HUB_LISTEN_PORT="8080"; fi
@@ -122,10 +142,16 @@ if [ "$INSTALL_AGENT" = true ]; then
         HUB_URL="http://127.0.0.1:${HUB_LISTEN_PORT}"
         dialog "Agent will connect to the local hub at:\n$HUB_URL" "OK"
     else
-        HUB_URL=$(input_dialog "Agent: Enter the hub URL.\n\nFormat: http://<tailscale-ip>:<port>\n\n(Find the hub's Tailscale IP with: tailscale ip -4 on the hub machine)" "http://100.x.x.x:8080")
-        if [ -z "$HUB_URL" ]; then
-            fail "Hub URL is required. Installation cancelled."
-        fi
+        while true; do
+            HUB_URL=$(input_dialog "Agent: Enter the hub URL.\n\nFormat: http://<tailscale-ip>:<port>\n\nExample: http://100.68.33.103:8080\n\n(Find the hub's Tailscale IP with: tailscale ip -4 on the hub machine)" "")
+            if [ -z "$HUB_URL" ]; then
+                fail "Hub URL is required. Installation cancelled."
+            fi
+            # Extract IP from URL and validate
+            URL_IP=$(echo "$HUB_URL" | sed -E 's|https?://||' | sed 's|:[0-9]*$||')
+            if is_valid_ip "$URL_IP"; then break; fi
+            warn_dialog "Invalid hub URL: $HUB_URL\n\nThe IP address '$URL_IP' is not valid.\n\nPlease enter a real IP address like:\nhttp://100.68.33.103:8080\n\nDo not use placeholders like 100.x.x.x"
+        done
     fi
 fi
 
