@@ -106,10 +106,27 @@ dialog_yesno "Welcome to TailClip!\n\nTailClip syncs your clipboard across devic
 
 # --- Step 2: Component Selection ----------------------------------------------
 
-COMPONENT=$(choose_dialog "What would you like to install?" "Agent Only (recommended for most devices)" "Hub Only (central server)" "Both Hub and Agent")
+COMPONENT=$(choose_dialog "What would you like to install?
+
+" "Agent Only" "Hub Only" "Both Hub and Agent" "Uninstall")
 
 if [ "$COMPONENT" = "false" ] || [ -z "$COMPONENT" ]; then
     echo "Installation cancelled."
+    exit 0
+fi
+
+if [ "$COMPONENT" = "Uninstall" ]; then
+    if [ -f "$CONFIG_DIR/Uninstall TailClip.command" ]; then
+        open "$CONFIG_DIR/Uninstall TailClip.command"
+    elif [ -d "$CONFIG_DIR/Uninstall TailClip.app" ]; then
+        open "$CONFIG_DIR/Uninstall TailClip.app"
+    elif [ -d "$RESOURCES_DIR/Uninstall TailClip.app" ]; then
+        open "$RESOURCES_DIR/Uninstall TailClip.app"
+    elif [ -f "$RESOURCES_DIR/Uninstall TailClip.command" ]; then
+        open "$RESOURCES_DIR/Uninstall TailClip.command"
+    else
+        fail "Uninstaller not found."
+    fi
     exit 0
 fi
 
