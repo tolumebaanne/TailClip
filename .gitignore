@@ -50,3 +50,6 @@ agent/agent
 # Database WAL/SHM files
 *.db-wal
 *.db-shm
+
+# Installer build output
+installer/dist/
