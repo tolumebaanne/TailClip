@@ -1,7 +1,0 @@
-Package: tailclip
-Version: 1.0.0
-Architecture: amd64
-Maintainer: TailClip <support@tailclip.com>
-Description: TailClip clipboard sync over Tailscale
- TailClip syncs your clipboard across devices over Tailscale VPN.
- Depends on tailscale.
