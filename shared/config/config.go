@@ -6,6 +6,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -102,6 +103,7 @@ func LoadHubConfig(path string) (*HubConfig, error) {
 	// WHY: File-based config is easier to manage than environment variables for
 	// non-sensitive settings and provides a single source of truth
 	if data, err := os.ReadFile(path); err == nil {
+		data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 		if err := json.Unmarshal(data, config); err != nil {
 			return nil, fmt.Errorf("failed to parse hub config: %w", err)
 		}
@@ -141,6 +143,7 @@ func LoadAgentConfig(path string) (*AgentConfig, error) {
 
 	// Read configuration file if it exists
 	if data, err := os.ReadFile(path); err == nil {
+		data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 		if err := json.Unmarshal(data, config); err != nil {
 			return nil, fmt.Errorf("failed to parse agent config: %w", err)
 		}

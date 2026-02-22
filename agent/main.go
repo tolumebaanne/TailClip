@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -41,6 +42,16 @@ func main() {
 		// WHY allow CLI override: Useful for running multiple agent instances
 		// during development or testing different configurations.
 		configPath = os.Args[1]
+	}
+
+	// Set up persistent file logging
+	// WHY: Because Windows UI apps (built with -H=windowsgui) have no console,
+	// fatal errors would otherwise be invisible. Writing logs next to the config
+	// file provides a way to troubleshoot crashes.
+	logPath := filepath.Join(filepath.Dir(configPath), "agent.log")
+	if logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666); err == nil {
+		log.SetOutput(logFile)
+		defer logFile.Close()
 	}
 
 	cfg, err := config.LoadAgentConfig(configPath)

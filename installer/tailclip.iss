@@ -72,6 +72,7 @@ begin
   DeviceNameEdit.Left := 0;
   DeviceNameEdit.Top := LblDeviceName.Top + LblDeviceName.Height + 4;
   DeviceNameEdit.Width := ConfigPage.SurfaceWidth;
+  DeviceNameEdit.Text := ExpandConstant('{computername}');
 
   LblAuthToken := TLabel.Create(ConfigPage);
   LblAuthToken.Parent := ConfigPage.Surface;
@@ -84,6 +85,7 @@ begin
   AuthTokenEdit.Left := 0;
   AuthTokenEdit.Top := LblAuthToken.Top + LblAuthToken.Height + 4;
   AuthTokenEdit.Width := ConfigPage.SurfaceWidth;
+  AuthTokenEdit.Text := 'tailclip-secret';
 
   LblHubIP := TLabel.Create(ConfigPage);
   LblHubIP.Parent := ConfigPage.Surface;
@@ -96,6 +98,7 @@ begin
   HubIPEdit.Left := 0;
   HubIPEdit.Top := LblHubIP.Top + LblHubIP.Height + 4;
   HubIPEdit.Width := ConfigPage.SurfaceWidth;
+  HubIPEdit.Text := '100.68.33.103';
 
   LblHubPort := TLabel.Create(ConfigPage);
   LblHubPort.Parent := ConfigPage.Surface;
@@ -170,7 +173,7 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    ConfigDir := ExpandConstant('{localappdata}\TailClip');
+    ConfigDir := ExpandConstant('{commonappdata}\TailClip');
     if not DirExists(ConfigDir) then
     begin
       CreateDir(ConfigDir);
@@ -210,7 +213,7 @@ var
 begin
   if CurUninstallStep = usPostUninstall then
   begin
-    ConfigDir := ExpandConstant('{localappdata}\TailClip');
+    ConfigDir := ExpandConstant('{commonappdata}\TailClip');
     if DirExists(ConfigDir) then
     begin
       DelTree(ConfigDir, True, True, True);
