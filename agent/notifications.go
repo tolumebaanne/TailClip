@@ -22,6 +22,8 @@
 // cross-platform Go API that maps to the correct native mechanism on each OS,
 // keeping TailClip's codebase free of build tags and platform-specific code.
 
+//go:build !windows
+
 package main
 
 import (

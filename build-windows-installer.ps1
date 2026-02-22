@@ -21,7 +21,7 @@ go env -w GOOS=windows
 go env -w GOARCH=amd64
 # compile with -ldflags "-H=windowsgui" so it doesn't open console, wait no we want it a service or via VBS wrapper
 # actually using VBS wrapper is fine, but building with windowsgui is even better:
-go build -ldflags "-H=windowsgui -w -s" -o "$DistDir\agent.exe" .
+go build -ldflags "-H=windowsgui -w -s" -o "$DistDir\TailClipAgent.exe" .
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Go build failed!"
     exit 1

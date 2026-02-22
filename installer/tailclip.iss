@@ -3,7 +3,7 @@ AppName=TailClip Agent
 AppVersion=1.0.0
 DefaultDirName={autopf}\TailClip
 DefaultGroupName=TailClip
-UninstallDisplayIcon={app}\agent.exe
+UninstallDisplayIcon={app}\TailClipAgent.exe
 Compression=lzma2
 SolidCompression=yes
 OutputDir=..\distribution
@@ -14,14 +14,14 @@ ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=compiler:SetupClassicIcon.ico
 
 [Files]
-Source: "..\distribution\agent.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "agent.vbs"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\distribution\TailClipAgent.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "TailClipAgent.vbs"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{commonstartup}\TailClip Agent"; Filename: "{app}\agent.vbs"; WorkingDir: "{app}"
+Name: "{commonstartup}\TailClip Agent"; Filename: "{app}\TailClipAgent.vbs"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\agent.vbs"; Description: "Start TailClip Agent now"; Flags: postinstall shellexec skipifsilent runhidden
+Filename: "{app}\TailClipAgent.vbs"; Description: "Start TailClip Agent now"; Flags: postinstall shellexec skipifsilent runhidden
 
 [Code]
 var
