@@ -72,7 +72,6 @@ begin
   DeviceNameEdit.Left := 0;
   DeviceNameEdit.Top := LblDeviceName.Top + LblDeviceName.Height + 4;
   DeviceNameEdit.Width := ConfigPage.SurfaceWidth;
-  DeviceNameEdit.Text := ExpandConstant('{computername}');
 
   LblAuthToken := TLabel.Create(ConfigPage);
   LblAuthToken.Parent := ConfigPage.Surface;
@@ -85,7 +84,6 @@ begin
   AuthTokenEdit.Left := 0;
   AuthTokenEdit.Top := LblAuthToken.Top + LblAuthToken.Height + 4;
   AuthTokenEdit.Width := ConfigPage.SurfaceWidth;
-  AuthTokenEdit.Text := 'tailclip-secret';
 
   LblHubIP := TLabel.Create(ConfigPage);
   LblHubIP.Parent := ConfigPage.Surface;
@@ -98,7 +96,6 @@ begin
   HubIPEdit.Left := 0;
   HubIPEdit.Top := LblHubIP.Top + LblHubIP.Height + 4;
   HubIPEdit.Width := ConfigPage.SurfaceWidth;
-  HubIPEdit.Text := '100.68.33.103';
 
   LblHubPort := TLabel.Create(ConfigPage);
   LblHubPort.Parent := ConfigPage.Surface;
@@ -111,7 +108,6 @@ begin
   HubPortEdit.Left := 0;
   HubPortEdit.Top := LblHubPort.Top + LblHubPort.Height + 4;
   HubPortEdit.Width := ConfigPage.SurfaceWidth;
-  HubPortEdit.Text := '8080';
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
